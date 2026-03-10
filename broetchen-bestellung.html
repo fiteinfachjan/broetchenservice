@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brötchen bestellen</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #FAF6EF; --warm: #F2E8D9; --brown: #5C3D2E; --brown-light: #8B6347;
+    --accent: #C9763A; --accent-light: #E8A96A; --text: #2C1A0E; --muted: #9B7B6A;
+    --border: #DDD0C0; --success: #4A7C59; --error: #A84242; --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text); min-height: 100vh; padding: 0 0 60px; }
+
+  header { background: var(--brown); color: var(--cream); padding: 28px 24px 22px; text-align: center; position: relative; overflow: hidden; }
+  header::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255,255,255,0.03) 20px, rgba(255,255,255,0.03) 40px); }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 1.9rem; font-weight: 600; letter-spacing: 0.01em; position: relative; }
+  header p { font-size: 0.88rem; color: var(--accent-light); margin-top: 6px; font-weight: 300; letter-spacing: 0.04em; position: relative; }
+  #header-wohnung { font-size: 0.78rem; color: rgba(255,255,255,0.45); margin-top: 5px; position: relative; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .container { max-width: 540px; margin: 0 auto; padding: 0 16px; }
+
+  #deadline-banner { display: none; background: var(--error); color: white; text-align: center; padding: 14px 20px; font-size: 0.9rem; font-weight: 500; }
+
+  #loading { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 0.9rem; }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* PIN */
+  #pin-screen { display: none; margin-top: 32px; }
+  .pin-card { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 32px 28px; text-align: center; }
+  .pin-card .pin-icon { font-size: 2.4rem; margin-bottom: 16px; }
+  .pin-card h2 { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--brown); margin-bottom: 8px; }
+  .pin-card p { font-size: 0.88rem; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+  .pin-inputs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+  .pin-digit {
+    width: 52px; height: 60px; border: 2px solid var(--border); border-radius: 10px;
+    font-size: 1.6rem; font-weight: 600; text-align: center; color: var(--brown);
+    background: var(--cream); outline: none; transition: border-color 0.2s; caret-color: var(--accent);
+  }
+  .pin-digit:focus { border-color: var(--accent); background: white; }
+  .pin-digit.filled { border-color: var(--brown-light); background: var(--warm); }
+  #pin-error { display: none; color: var(--error); font-size: 0.85rem; margin-bottom: 14px; animation: shake 0.3s ease; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+  #pin-submit {
+    width: 100%; padding: 13px; background: var(--accent); color: white; border: none;
+    border-radius: 10px; font-family: 'Playfair Display', serif; font-size: 1rem;
+    font-weight: 600; cursor: pointer; transition: background 0.2s;
+  }
+  #pin-submit:hover { background: var(--brown); }
+  #pin-submit:disabled { background: var(--muted); cursor: not-allowed; }
+
+  /* INVALID */
+  #invalid-screen {
+    display: none; background: #F9EAEA; border: 1.5px solid #D4A0A0;
+    border-radius: var(--radius); padding: 28px 24px; text-align: center;
+    margin-top: 32px; color: var(--error); font-size: 0.92rem; line-height: 1.6;
+  }
+
+  /* SECTIONS */
+  .section { background: white; border: 1px solid var(--border); border-radius: var(--radius); margin-top: 20px; overflow: hidden; }
+  .section-header { background: var(--warm); padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .section-header .icon { font-size: 1.1rem; }
+  .section-header h2 { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; color: var(--brown); }
+  .section-body { padding: 20px; }
+
+  label { display: block; font-size: 0.82rem; font-weight: 500; color: var(--brown-light); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  select, input[type="text"], input[type="email"], input[type="date"] {
+    width: 100%; padding: 12px 16px; border: 1.5px solid var(--border); border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--text);
+    background: var(--cream); appearance: none; transition: border-color 0.2s; outline: none;
+  }
+  select:focus, input:focus { border-color: var(--accent); background: white; }
+  .field { margin-bottom: 18px; }
+  .field:last-child { margin-bottom: 0; }
+  .optional-label { font-size: 0.78rem; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 6px; }
+  .wohnung-badge { display: inline-block; background: var(--warm); border: 1.5px solid var(--accent-light); color: var(--brown); border-radius: 8px; padding: 10px 16px; font-weight: 500; font-size: 0.95rem; width: 100%; }
+
+  /* AUFENTHALT-HINWEIS */
+  #aufenthalt-info { display: none; background: #EAF4EE; border: 1.5px solid #A3C9B0; border-radius: 10px; padding: 12px 16px; margin-top: 10px; font-size: 0.88rem; color: var(--success); line-height: 1.5; }
+  #no-aufenthalt-msg { display: none; background: #FFF4E5; border: 1.5px solid #E8A96A; border-radius: 10px; padding: 12px 16px; margin-top: 10px; font-size: 0.88rem; color: #6B4200; line-height: 1.5; }
+
+  /* PRODUCTS */
+  .products-grid { display: flex; flex-direction: column; }
+  .product-row { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+  .product-row:last-child { border-bottom: none; }
+  .product-info { flex: 1; min-width: 0; }
+  .product-name { font-size: 0.95rem; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .product-price { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+  .qty-control { display: flex; align-items: center; border: 1.5px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+  .qty-btn { background: var(--warm); border: none; width: 36px; height: 36px; font-size: 1.1rem; color: var(--brown); cursor: pointer; transition: background 0.15s; line-height: 1; font-weight: 500; }
+  .qty-btn:active { background: var(--border); }
+  .qty-display { width: 36px; text-align: center; font-size: 0.95rem; font-weight: 500; color: var(--text); border-left: 1px solid var(--border); border-right: 1px solid var(--border); padding: 8px 0; background: white; }
+  .qty-display.active { color: var(--accent); font-weight: 600; }
+  .category-divider { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 14px 0 6px; border-bottom: 1px solid var(--border); margin-bottom: 2px; }
+
+  /* MESSAGES */
+  #excluded-msg, #already-ordered-msg, #outside-range-msg {
+    display: none; background: #FFF4E5; border: 1.5px solid #E8A96A;
+    border-radius: var(--radius); padding: 16px 20px; margin-top: 20px;
+    text-align: center; color: var(--brown); font-size: 0.92rem; line-height: 1.6;
+  }
+
+  /* SUMMARY */
+  #summary-box { background: var(--warm); border: 1.5px solid var(--accent-light); border-radius: var(--radius); padding: 16px 20px; margin-top: 20px; display: none; }
+  #summary-box h3 { font-family: 'Playfair Display', serif; font-size: 0.95rem; color: var(--brown); margin-bottom: 10px; }
+  #summary-list { list-style: none; }
+  #summary-list li { display: flex; justify-content: space-between; font-size: 0.88rem; color: var(--text); padding: 3px 0; }
+  #summary-total { display: flex; justify-content: space-between; font-weight: 600; font-size: 0.95rem; color: var(--brown); border-top: 1px solid var(--border); margin-top: 10px; padding-top: 10px; }
+
+  #submit-btn { width: 100%; margin-top: 24px; padding: 16px; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 600; letter-spacing: 0.02em; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+  #submit-btn:hover { background: var(--brown); }
+  #submit-btn:active { transform: scale(0.98); }
+  #submit-btn:disabled { background: var(--muted); cursor: not-allowed; transform: none; }
+
+  #result-msg { display: none; margin-top: 20px; padding: 20px; border-radius: var(--radius); text-align: center; font-size: 0.95rem; line-height: 1.5; }
+  #result-msg.success { background: #EAF4EE; border: 1.5px solid #A3C9B0; color: var(--success); }
+  #result-msg.error { background: #F9EAEA; border: 1.5px solid #D4A0A0; color: var(--error); }
+
+  /* EDIT MODE */
+  #edit-mode-banner { display:none; background:#EAF4EE; border:1.5px solid #A3C9B0; border-radius:var(--radius); padding:14px 20px; margin-top:20px; text-align:center; font-size:0.92rem; color:var(--success); line-height:1.6; }
+  #edit-mode-banner strong { display:block; margin-bottom:4px; font-size:0.95rem; }
+  #cancel-order-btn { display:none; width:100%; margin-top:12px; padding:13px; background:white; color:var(--error); border:1.5px solid var(--error); border-radius:var(--radius); font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:500; cursor:pointer; transition:background 0.2s; }
+  #cancel-order-btn:hover { background:#F9EAEA; }
+
+  /* HISTORY */
+  #history-section { margin-top: 20px; }
+  .history-day { background: white; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+  .history-day-header { background: var(--warm); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; }
+  .history-day-date { font-size: 0.88rem; font-weight: 600; color: var(--brown); }
+  .history-day-total { font-size: 0.85rem; color: var(--accent); font-weight: 600; }
+  .history-day-items { padding: 10px 16px; }
+  .history-item { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text); padding: 4px 0; border-bottom: 1px solid var(--border); }
+  .history-item:last-child { border-bottom: none; }
+  .history-item-name { color: var(--text); }
+  .history-item-price { color: var(--muted); }
+  .history-total-bar { background: var(--warm); border-top: 1px solid var(--border); padding: 10px 16px; display: flex; justify-content: space-between; font-size: 0.88rem; font-weight: 600; color: var(--brown); }
+  #history-loading { text-align: center; padding: 20px; color: var(--muted); font-size: 0.88rem; }
+  #history-empty { text-align: center; padding: 16px; color: var(--muted); font-size: 0.88rem; font-style: italic; }
+
+  .note { font-size: 0.8rem; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  footer { text-align: center; margin-top: 40px; font-size: 0.75rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>&#x1F950; Br&#xF6;tchen-Bestellung</h1>
+  <p>Frisch vom B&#xE4;cker &#x2013; t&#xE4;glich bis 17:00 Uhr bestellen</p>
+  <div id="header-wohnung"></div>
+</header>
+
+<div id="deadline-banner">&#x26A0;&#xFE0F; Bestellschluss f&#xFC;r heute (17:00 Uhr) ist &#xFC;berschritten. Bitte bestellen Sie f&#xFC;r den n&#xE4;chsten verf&#xFC;gbaren Tag.</div>
+
+<div class="container">
+
+  <div id="loading"><div class="spinner"></div>Wird geladen&#x2026;</div>
+
+  <div id="invalid-screen">&#x1F512; Dieser Link ist ung&#xFC;ltig. Bitte verwenden Sie den QR-Code in Ihrer Ferienwohnung.</div>
+
+  <div id="pin-screen">
+    <div class="pin-card">
+      <div class="pin-icon">&#x1F511;</div>
+      <h2>PIN eingeben</h2>
+      <p>Bitte geben Sie den 4-stelligen PIN ein,<br>der in Ihrer Ferienwohnung ausliegt.</p>
+      <div class="pin-inputs">
+        <input class="pin-digit" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        <input class="pin-digit" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        <input class="pin-digit" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        <input class="pin-digit" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]">
+      </div>
+      <div id="pin-error">&#x274C; Falscher PIN. Bitte erneut versuchen.</div>
+      <button id="pin-submit" disabled>Weiter</button>
+    </div>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="section">
+      <div class="section-header"><span class="icon">&#x1F3E1;</span><h2>Ihre Angaben</h2></div>
+      <div class="section-body">
+        <div class="field">
+          <label>Ferienwohnung</label>
+          <div id="wohnung-display"></div>
+        </div>
+        <div class="field">
+          <label>Liefertag (Morgen der Lieferung)</label>
+          <input type="date" id="liefertag">
+          <div id="aufenthalt-info"></div>
+          <div id="no-aufenthalt-msg">&#x26A0;&#xFE0F; F&#xFC;r diese Wohnung ist kein Aufenthalt eingetragen. Bitte wenden Sie sich an die Unterkunft.</div>
+          <p class="note" id="date-note"></p>
+        </div>
+        <div class="field">
+          <label>E-Mail <span class="optional-label">(optional &#x2013; f&#xFC;r Best&#xE4;tigung)</span></label>
+          <input type="email" id="email" placeholder="ihre@email.de">
+        </div>
+      </div>
+    </div>
+
+    <div id="excluded-msg">&#x1F6AB; F&#xFC;r diesen Tag wird leider kein Br&#xF6;tchenservice angeboten. Bitte w&#xE4;hlen Sie einen anderen Tag.</div>
+    <div id="outside-range-msg">&#x1F4C5; Dieser Tag liegt au&#xDF;erhalb Ihres Aufenthaltszeitraums. Bitte w&#xE4;hlen Sie einen Tag innerhalb Ihres Aufenthalts.</div>
+    <div id="already-ordered-msg" style="cursor:pointer" onclick="enterEditMode()">
+      &#x2705; F&#xFC;r <strong id="already-wohnung"></strong> wurde an diesem Tag bereits bestellt.
+      <br><span style="font-size:0.85rem;text-decoration:underline;opacity:0.8">Bestellung bis Bestellschluss bearbeiten &#x2192;</span>
+    </div>
+    <div id="edit-mode-banner">
+      <strong>&#x270F;&#xFE0F; Bestellung bearbeiten</strong>
+      &#xC4;nderungen sind bis 17:00 Uhr m&#xF6;glich. Einfach Mengen anpassen und erneut absenden.
+    </div>
+
+    <div class="section" id="products-section" style="display:none">
+      <div class="section-header"><span class="icon">&#x1F35E;</span><h2>Ihre Auswahl</h2></div>
+      <div class="section-body"><div id="products-grid" class="products-grid"></div></div>
+    </div>
+
+    <div id="summary-box">
+      <h3>Ihre Bestellung</h3>
+      <ul id="summary-list"></ul>
+      <div id="summary-total"><span>Gesamt</span><span id="summary-total-val"></span></div>
+    </div>
+
+    <button id="submit-btn" disabled>Jetzt verbindlich bestellen</button>
+    <button id="cancel-order-btn">&#x1F5D1; Bestellung stornieren</button>
+    <div id="result-msg"></div>
+
+    <!-- BESTELLHISTORIE -->
+    <div id="history-section">
+      <div class="section">
+        <div class="section-header"><span class="icon">&#x1F4CB;</span><h2>Bisherige Bestellungen</h2></div>
+        <div class="section-body" style="padding:0">
+          <div id="history-loading" style="padding:20px;text-align:center;color:var(--muted);font-size:0.88rem">Wird geladen&#x2026;</div>
+          <div id="history-empty" style="display:none;padding:16px;text-align:center;color:var(--muted);font-size:0.88rem;font-style:italic">Noch keine Bestellungen in diesem Aufenthalt.</div>
+          <div id="history-list"></div>
+          <div id="history-total-bar" style="display:none" class="history-total-bar">
+            <span>Gesamtbetrag Aufenthalt</span>
+            <span id="history-grand-total"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Bestellschluss t&#xE4;glich um 17:00 Uhr f&#xFC;r den Folgetag</footer>
+</div>
+
+<script>
+const CONFIG = {
+  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw30bCKF-K_fWooOSdg9VKC2K6FHBfMda4FhHmVFkUGVhP5-0oe-XXLTbIOMZk3qBel/exec',
+  DEADLINE_HOUR: 17,
+  DEADLINE_MINUTE: 0,
+};
+
+let products = [], excludedDates = [], bookedSlots = [], quantities = {};
+let deadlinePassed = false, currentWohnung = null, aufenthalt = null;
+let _wohnungen = [];
+let editMode = false; // true wenn eine bestehende Bestellung bearbeitet wird
+
+async function init() {
+  checkDeadline();
+  const params = new URLSearchParams(window.location.search);
+  const wKey = (params.get('w') || '').toLowerCase().trim();
+
+  if (!wKey) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('invalid-screen').style.display = 'block';
+    return;
+  }
+
+  await loadData(wKey);
+
+  const wDef = _wohnungen.find(w => w.key === wKey);
+  if (!wDef) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('invalid-screen').style.display = 'block';
+    return;
+  }
+
+  currentWohnung = { key: wKey, name: wDef.name };
+  document.getElementById('header-wohnung').textContent = currentWohnung.name;
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('pin-screen').style.display = 'block';
+  setupPinInput();
+}
+
+function checkDeadline() {
+  const now = new Date();
+  deadlinePassed = now.getHours() > CONFIG.DEADLINE_HOUR ||
+    (now.getHours() === CONFIG.DEADLINE_HOUR && now.getMinutes() >= CONFIG.DEADLINE_MINUTE);
+  if (deadlinePassed) document.getElementById('deadline-banner').style.display = 'block';
+}
+
+async function loadData(wKey) {
+  try {
+    const url = CONFIG.SCRIPT_URL + '?action=getData' + (wKey ? '&key=' + encodeURIComponent(wKey) : '');
+    const res = await fetch(url);
+    const data = await res.json();
+    products = data.products || FALLBACK_PRODUCTS;
+    excludedDates = data.excludedDates || [];
+    bookedSlots = data.bookedSlots || [];
+    _wohnungen = data.wohnungen || [];
+    aufenthalt = data.aufenthalt || null; // {von, bis} oder null
+  } catch(e) {
+    products = FALLBACK_PRODUCTS; excludedDates = []; bookedSlots = []; _wohnungen = []; aufenthalt = null;
+  }
+  products.forEach(p => { quantities[p.id] = 0; });
+}
+
+// ── PIN ──────────────────────────────────────────────────────────────
+function setupPinInput() {
+  const digits = document.querySelectorAll('.pin-digit');
+  const btn = document.getElementById('pin-submit');
+
+  digits.forEach((d, i) => {
+    d.addEventListener('input', () => {
+      d.value = d.value.replace(/\D/g, '').slice(-1);
+      d.classList.toggle('filled', !!d.value);
+      if (d.value && i < digits.length - 1) digits[i+1].focus();
+      btn.disabled = ![...digits].every(x => x.value);
+      document.getElementById('pin-error').style.display = 'none';
+    });
+    d.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !d.value && i > 0) {
+        digits[i-1].focus(); digits[i-1].value = ''; digits[i-1].classList.remove('filled');
+      }
+    });
+  });
+
+  btn.addEventListener('click', verifyPin);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !btn.disabled && document.getElementById('pin-screen').style.display !== 'none') verifyPin();
+  });
+  setTimeout(() => digits[0].focus(), 100);
+}
+
+async function verifyPin() {
+  const btn = document.getElementById('pin-submit');
+  const entered = [...document.querySelectorAll('.pin-digit')].map(d => d.value).join('');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  try {
+    const url = `${CONFIG.SCRIPT_URL}?action=verifyPin&key=${encodeURIComponent(currentWohnung.key)}&pin=${encodeURIComponent(entered)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.valid) {
+      document.getElementById('pin-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      setupApp();
+      loadHistory();
+    } else {
+      document.getElementById('pin-error').style.display = 'block';
+      document.querySelectorAll('.pin-digit').forEach(d => { d.value = ''; d.classList.remove('filled'); });
+      btn.disabled = true;
+      btn.textContent = 'Weiter';
+      document.querySelectorAll('.pin-digit')[0].focus();
+    }
+  } catch(e) {
+    document.getElementById('pin-error').textContent = 'Verbindungsfehler. Bitte erneut versuchen.';
+    document.getElementById('pin-error').style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Weiter';
+  }
+}
+
+// ── APP SETUP ────────────────────────────────────────────────────────
+function setupApp() {
+  document.getElementById('wohnung-display').innerHTML =
+    `<div class="wohnung-badge">&#x1F3E1; ${currentWohnung.name}</div>`;
+  document.getElementById('already-wohnung').textContent = currentWohnung.name;
+
+  const input = document.getElementById('liefertag');
+  const today = new Date();
+
+  if (!aufenthalt) {
+    // Kein Aufenthalt gepflegt
+    document.getElementById('no-aufenthalt-msg').style.display = 'block';
+    input.disabled = true;
+    document.getElementById('submit-btn').disabled = true;
+    return;
+  }
+
+  // Aufenthalt vorhanden: Datum auf Zeitraum einschränken
+  const vonDate = new Date(aufenthalt.von + 'T00:00:00');
+  const bisDate = new Date(aufenthalt.bis + 'T00:00:00');
+
+  // Frühestes bestellbares Datum: morgen (oder übermorgen nach Deadline)
+  const earliest = new Date(today);
+  earliest.setDate(today.getDate() + (deadlinePassed ? 2 : 1));
+
+  // min = das spätere von earliest und Aufenthalt-von
+  const minDate = earliest > vonDate ? earliest : vonDate;
+
+  input.min = toDateStr(minDate);
+  input.max = aufenthalt.bis;
+  input.value = toDateStr(minDate) <= aufenthalt.bis ? toDateStr(minDate) : aufenthalt.bis;
+
+  // Info-Banner mit Aufenthaltszeitraum
+  const vonLeserlich = vonDate.toLocaleDateString('de-DE', {day:'numeric', month:'long'});
+  const bisLeserlich = bisDate.toLocaleDateString('de-DE', {day:'numeric', month:'long', year:'numeric'});
+  document.getElementById('aufenthalt-info').style.display = 'block';
+  document.getElementById('aufenthalt-info').textContent =
+    `Ihr Aufenthalt: ${vonLeserlich} bis ${bisLeserlich}`;
+
+  input.addEventListener('change', onDateChange);
+  document.getElementById('email').addEventListener('input', validateForm);
+  onDateChange();
+}
+
+function isBooked(datum) { return bookedSlots.includes(currentWohnung.key + '|' + datum); }
+
+function isOutsideRange(datum) {
+  if (!aufenthalt) return true;
+  return datum < aufenthalt.von || datum > aufenthalt.bis;
+}
+
+function onDateChange() {
+  // Editiermodus beenden wenn Datum wechselt
+  if (editMode) exitEditMode();
+  const val = document.getElementById('liefertag').value;
+  document.getElementById('excluded-msg').style.display = 'none';
+  document.getElementById('already-ordered-msg').style.display = 'none';
+  document.getElementById('outside-range-msg').style.display = 'none';
+  document.getElementById('edit-mode-banner').style.display = 'none';
+  document.getElementById('products-section').style.display = 'none';
+  document.getElementById('date-note').textContent = '';
+  products.forEach(p => { quantities[p.id] = 0; });
+
+  if (!val) { validateForm(); return; }
+
+  if (isOutsideRange(val)) {
+    document.getElementById('outside-range-msg').style.display = 'block';
+  } else if (excludedDates.includes(val)) {
+    document.getElementById('excluded-msg').style.display = 'block';
+  } else if (isBooked(val)) {
+    document.getElementById('already-ordered-msg').style.display = 'block';
+  } else {
+    const d = new Date(val + 'T00:00:00');
+    document.getElementById('date-note').textContent =
+      'Lieferung am ' + d.toLocaleDateString('de-DE', {weekday:'long', day:'numeric', month:'long'});
+    renderProducts();
+    document.getElementById('products-section').style.display = 'block';
+  }
+  validateForm();
+}
+
+function renderProducts() {
+  const grid = document.getElementById('products-grid');
+  grid.innerHTML = '';
+  const cats = {};
+  products.filter(p => p.active).forEach(p => { (cats[p.category] = cats[p.category] || []).push(p); });
+  const catNames = Object.keys(cats);
+  catNames.forEach(cat => {
+    if (catNames.length > 1) {
+      const div = document.createElement('div');
+      div.className = 'category-divider'; div.textContent = cat; grid.appendChild(div);
+    }
+    cats[cat].forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'product-row';
+      row.innerHTML = `
+        <div class="product-info">
+          <div class="product-name">${p.name}</div>
+          <div class="product-price">${p.price.toFixed(2).replace('.',',')} &euro;</div>
+        </div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeQty('${p.id}',-1)">&#x2212;</button>
+          <div class="qty-display" id="qty-${p.id}">0</div>
+          <button class="qty-btn" onclick="changeQty('${p.id}',+1)">+</button>
+        </div>`;
+      grid.appendChild(row);
+    });
+  });
+}
+
+function changeQty(id, delta) {
+  quantities[id] = Math.max(0, (quantities[id]||0) + delta);
+  const el = document.getElementById('qty-' + id);
+  el.textContent = quantities[id];
+  el.className = 'qty-display' + (quantities[id] > 0 ? ' active' : '');
+  updateSummary(); validateForm();
+}
+
+function updateSummary() {
+  const items = products.filter(p => quantities[p.id] > 0);
+  const box = document.getElementById('summary-box');
+  if (!items.length) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  let total = 0, html = '';
+  items.forEach(p => {
+    const sub = quantities[p.id] * p.price; total += sub;
+    html += `<li><span>${quantities[p.id]}&times; ${p.name}</span><span>${sub.toFixed(2).replace('.',',')} &euro;</span></li>`;
+  });
+  document.getElementById('summary-list').innerHTML = html;
+  document.getElementById('summary-total-val').textContent = total.toFixed(2).replace('.',',') + ' \u20AC';
+}
+
+function validateForm() {
+  const datum = document.getElementById('liefertag').value;
+  const blocked = !editMode && (!datum || isOutsideRange(datum) || excludedDates.includes(datum) || isBooked(datum));
+  const hasItems = products.some(p => quantities[p.id] > 0);
+  // Im Editiermodus ist der Submit-Button aktiv sobald es Produkte gibt
+  // Der Stornieren-Button ist immer aktiv im Editiermodus
+  document.getElementById('submit-btn').disabled = blocked || !hasItems;
+}
+
+document.getElementById('submit-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('submit-btn');
+  const resultMsg = document.getElementById('result-msg');
+  resultMsg.style.display = 'none';
+
+  const datum = document.getElementById('liefertag').value;
+  const email = document.getElementById('email').value.trim();
+  const items = products.filter(p => quantities[p.id] > 0)
+    .map(p => ({ id: p.id, name: p.name, qty: quantities[p.id], price: p.price }));
+  const total = items.reduce((s, i) => s + i.qty * i.price, 0);
+
+  btn.disabled = true;
+  btn.textContent = editMode ? 'Wird gespeichert...' : 'Wird übermittelt...';
+
+  try {
+    const action = editMode ? 'updateOrder' : 'submitOrder';
+    const res = await fetch(CONFIG.SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action, wohnungKey: currentWohnung.key, wohnung: currentWohnung.name, datum, email, items, total })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (!editMode) bookedSlots.push(currentWohnung.key + '|' + datum);
+      resultMsg.className = 'success';
+      const label = editMode ? 'Bestellung aktualisiert!' : 'Bestellung eingegangen!';
+      resultMsg.innerHTML = `&#x2705; <strong>${label}</strong><br>${currentWohnung.name} &middot; ${formatDate(datum)}<br>${email ? 'Best&auml;tigung gesendet an ' + email : ''}`;
+      resultMsg.style.display = 'block';
+      btn.textContent = editMode ? '&#x2713; Gespeichert' : '&#x2713; Bestellt';
+      editMode = false;
+      products.forEach(p => { quantities[p.id] = 0; });
+      exitEditMode();
+      onDateChange();
+      loadHistory();
+    } else {
+      throw new Error(data.error || 'Unbekannter Fehler');
+    }
+  } catch(e) {
+    resultMsg.className = 'error';
+    resultMsg.textContent = 'Fehler: ' + e.message;
+    resultMsg.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = editMode ? 'Änderung speichern' : 'Jetzt verbindlich bestellen';
+  }
+});
+
+// Stornierung
+document.getElementById('cancel-order-btn').addEventListener('click', async () => {
+  if (!confirm('Bestellung wirklich stornieren?')) return;
+  const datum = document.getElementById('liefertag').value;
+  const email = document.getElementById('email').value.trim();
+  const resultMsg = document.getElementById('result-msg');
+  resultMsg.style.display = 'none';
+
+  try {
+    const res = await fetch(CONFIG.SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'updateOrder', wohnungKey: currentWohnung.key, wohnung: currentWohnung.name, datum, email, items: [], total: 0 })
+    });
+    const data = await res.json();
+    if (data.success) {
+      // Slot aus bookedSlots entfernen
+      const slot = currentWohnung.key + '|' + datum;
+      bookedSlots = bookedSlots.filter(s => s !== slot);
+      resultMsg.className = 'success';
+      resultMsg.innerHTML = `&#x1F5D1; <strong>Bestellung storniert.</strong><br>${currentWohnung.name} &middot; ${formatDate(datum)}<br>${email ? 'Best&auml;tigung gesendet an ' + email : ''}`;
+      resultMsg.style.display = 'block';
+      editMode = false;
+      products.forEach(p => { quantities[p.id] = 0; });
+      exitEditMode();
+      onDateChange();
+      loadHistory();
+    } else {
+      throw new Error(data.error || 'Unbekannter Fehler');
+    }
+  } catch(e) {
+    resultMsg.className = 'error';
+    resultMsg.textContent = 'Fehler: ' + e.message;
+    resultMsg.style.display = 'block';
+  }
+});
+
+// ── EDIT MODE ─────────────────────────────────────────────────────────
+async function enterEditMode() {
+  if (deadlinePassed) return; // nach Bestellschluss kein Bearbeiten
+
+  const datum = document.getElementById('liefertag').value;
+  editMode = true;
+
+  // Bestehende Bestellung aus Historie laden und Mengen vorbelegen
+  try {
+    const url = `${CONFIG.SCRIPT_URL}?action=getHistory&key=${encodeURIComponent(currentWohnung.key)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const dayOrder = (data.orders || []).find(o => o.datum === datum);
+    if (dayOrder) {
+      dayOrder.items.forEach(item => {
+        // Produktname matchen (id ist zuverlässiger, aber wir haben nur name in history)
+        const prod = products.find(p => p.name === item.name);
+        if (prod) quantities[prod.id] = item.qty;
+      });
+    }
+  } catch(e) { /* Mengen bleiben bei 0, Gast kann manuell eintragen */ }
+
+  // UI umschalten
+  document.getElementById('already-ordered-msg').style.display = 'none';
+  document.getElementById('edit-mode-banner').style.display = 'block';
+  document.getElementById('cancel-order-btn').style.display = 'block';
+  document.getElementById('products-section').style.display = 'block';
+  document.getElementById('submit-btn').textContent = '&#xE4;nderung speichern';
+  document.getElementById('liefertag').disabled = true; // Datum darf nicht geändert werden
+
+  renderProducts();
+  // Mengen in die Anzeige übernehmen
+  products.forEach(p => {
+    const el = document.getElementById('qty-' + p.id);
+    if (el) {
+      el.textContent = quantities[p.id] || 0;
+      el.className = 'qty-display' + (quantities[p.id] > 0 ? ' active' : '');
+    }
+  });
+  updateSummary();
+  validateForm();
+}
+
+function exitEditMode() {
+  editMode = false;
+  document.getElementById('edit-mode-banner').style.display = 'none';
+  document.getElementById('cancel-order-btn').style.display = 'none';
+  document.getElementById('submit-btn').textContent = 'Jetzt verbindlich bestellen';
+  document.getElementById('liefertag').disabled = false;
+}
+
+// ── BESTELLHISTORIE ───────────────────────────────────────────────────
+async function loadHistory() {
+  const listEl = document.getElementById('history-list');
+  const loadingEl = document.getElementById('history-loading');
+  const emptyEl = document.getElementById('history-empty');
+  const totalBar = document.getElementById('history-total-bar');
+
+  listEl.innerHTML = '';
+  loadingEl.style.display = 'block';
+  emptyEl.style.display = 'none';
+  totalBar.style.display = 'none';
+
+  try {
+    const url = `${CONFIG.SCRIPT_URL}?action=getHistory&key=${encodeURIComponent(currentWohnung.key)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const orders = data.orders || [];
+
+    loadingEl.style.display = 'none';
+
+    if (orders.length === 0) {
+      emptyEl.style.display = 'block';
+      return;
+    }
+
+    let grandTotal = 0;
+    orders.forEach(day => {
+      grandTotal += day.total;
+      const d = new Date(day.datum + 'T00:00:00');
+      const dayLabel = d.toLocaleDateString('de-DE', {weekday:'short', day:'numeric', month:'long'});
+
+      const dayEl = document.createElement('div');
+      dayEl.className = 'history-day';
+      dayEl.innerHTML = `
+        <div class="history-day-header">
+          <span class="history-day-date">${dayLabel}</span>
+          <span class="history-day-total">${day.total.toFixed(2).replace('.',',')} &euro;</span>
+        </div>
+        <div class="history-day-items">
+          ${day.items.map(i => `
+            <div class="history-item">
+              <span class="history-item-name">${i.qty}&times; ${i.name}</span>
+              <span class="history-item-price">${i.sum.toFixed(2).replace('.',',')} &euro;</span>
+            </div>`).join('')}
+        </div>`;
+      listEl.appendChild(dayEl);
+    });
+
+    document.getElementById('history-grand-total').textContent =
+      grandTotal.toFixed(2).replace('.',',') + ' \u20AC';
+    totalBar.style.display = 'flex';
+
+  } catch(e) {
+    loadingEl.style.display = 'none';
+    listEl.innerHTML = '<p style="padding:16px;color:var(--muted);font-size:0.85rem;text-align:center">Verlauf konnte nicht geladen werden.</p>';
+  }
+}
+
+// ── HILFSFUNKTIONEN ───────────────────────────────────────────────────
+const FALLBACK_PRODUCTS = [
+  {id:'1',name:'Br&ouml;tchen (klassisch)',category:'Br&ouml;tchen',price:0.45,active:true},
+  {id:'2',name:'Vollkornbr&ouml;tchen',category:'Br&ouml;tchen',price:0.50,active:true},
+  {id:'3',name:'Laugenbrötchen',category:'Br&ouml;tchen',price:0.55,active:true},
+  {id:'4',name:'Mohnbrötchen',category:'Br&ouml;tchen',price:0.45,active:true},
+  {id:'5',name:'Sesambrötchen',category:'Br&ouml;tchen',price:0.45,active:true},
+  {id:'6',name:'Roggenmischbrot (500g)',category:'Brot',price:3.20,active:true},
+  {id:'7',name:'Vollkornbrot (500g)',category:'Brot',price:3.50,active:true},
+];
+
+function toDateStr(d) { return d.toISOString().split('T')[0]; }
+function formatDate(str) {
+  return new Date(str+'T00:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+
+init();
+</script>
+</body>
+</html>
